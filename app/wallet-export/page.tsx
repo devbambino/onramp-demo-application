@@ -1,6 +1,6 @@
 'use client';
 import { PrivyProvider } from '@privy-io/react-auth';
-import { WalletExport } from '../components/WalletExport';
+import WalletExport from '../components/WalletExport';
 
 export default function WalletExportPage() {
   return (

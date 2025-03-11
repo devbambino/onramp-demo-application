@@ -8,9 +8,9 @@ import {
   Spinner,
 } from '@nextui-org/react';
 import { usePrivy, useSolanaWallets, useWallets } from '@privy-io/react-auth';
-import { useCallback, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 
-export const WalletExport = () => {
+const WalletExport = () => {
   const { login, user, logout, exportWallet } = usePrivy();
   const [loading, setLoading] = useState(false);
 
@@ -134,3 +134,5 @@ export const WalletExport = () => {
     </div>
   );
 };
+
+export default memo(WalletExport);
