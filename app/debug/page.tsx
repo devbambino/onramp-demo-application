@@ -23,9 +23,6 @@ export default function DebugPage() {
       .NEXT_PUBLIC_COINBASE_CLOUD_API_KEY
       ? 'Set'
       : 'Not set',
-    NEXT_PUBLIC_CDP_PROJECT_ID: process.env.NEXT_PUBLIC_CDP_PROJECT_ID
-      ? 'Set'
-      : 'Not set',
     NEXT_PUBLIC_CDP_PROJECT_ID_VALUE:
       process.env.NEXT_PUBLIC_CDP_PROJECT_ID || 'Empty',
   };
