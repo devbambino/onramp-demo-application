@@ -16,16 +16,18 @@ export async function POST(request: NextRequest) {
 
     // Log environment variables for debugging (without exposing actual values)
     console.log('Environment variables in API route:', {
-      walletConnectProjectId: process.env.CDP_PROJECT_ID ? 'Set' : 'Not set',
+      walletConnectProjectId: process.env.NEXT_PUBLIC_CDP_PROJECT_ID
+        ? 'Set'
+        : 'Not set',
       onchainKitApiKey: process.env.ONCHAINKIT_API_KEY ? 'Set' : 'Not set',
-      cdpProjectId: process.env.CDP_PROJECT_ID ? 'Set' : 'Not set',
+      cdpProjectId: process.env.NEXT_PUBLIC_CDP_PROJECT_ID ? 'Set' : 'Not set',
     });
 
     // For Vercel deployment, make sure these environment variables are set
     // Using the correct variable names according to the documentation
-    const walletConnectProjectId = process.env.CDP_PROJECT_ID || '';
+    const walletConnectProjectId = process.env.NEXT_PUBLIC_CDP_PROJECT_ID || '';
     const onchainKitApiKey = process.env.ONCHAINKIT_API_KEY || '';
-    const cdpProjectId = process.env.CDP_PROJECT_ID || '';
+    const cdpProjectId = process.env.NEXT_PUBLIC_CDP_PROJECT_ID || '';
 
     // Check if any of the required environment variables are missing
     const missingVars = [];
