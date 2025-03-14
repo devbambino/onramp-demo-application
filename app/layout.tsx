@@ -1,24 +1,31 @@
-import '@coinbase/onchainkit/styles.css';
-import type { Metadata } from 'next';
-import localFont from 'next/font/local';
-import './globals.css';
-
-import { RootProvider } from './providers';
-
-const geistSans = localFont({
-  src: './fonts/GeistVF.woff',
-  variable: '--font-geist-sans',
-  weight: '100 900',
-});
-const geistMono = localFont({
-  src: './fonts/GeistMonoVF.woff',
-  variable: '--font-geist-mono',
-  weight: '100 900',
-});
+import "@coinbase/onchainkit/styles.css";
+import type { Metadata } from "next";
+import "./globals.css";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: 'Coinbase Onramp',
-  description: 'Created using Coinbase Developer Platform APIs',
+  title: "Coinbase Onramp & Offramp Demo",
+  description:
+    "A demo application showcasing Coinbase Onramp and Offramp integration",
+  icons: {
+    icon: [
+      {
+        url: "/favicon.ico",
+        sizes: "any",
+      },
+      {
+        url: "/favicon.svg",
+        type: "image/svg+xml",
+      },
+    ],
+    apple: [
+      {
+        url: "/apple-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
+  },
 };
 
 export default function RootLayout({
@@ -27,11 +34,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <RootProvider>{children}</RootProvider>
+    <html lang="en" className="light">
+      <body className="bg-background">
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

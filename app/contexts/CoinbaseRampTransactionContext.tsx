@@ -1,380 +1,270 @@
-import isocountries from 'i18n-iso-countries';
-import enLocale from 'i18n-iso-countries/langs/en.json';
+"use client";
 import {
   createContext,
-  ReactNode,
-  useCallback,
   useContext,
-  useEffect,
-  useMemo,
   useState,
-} from 'react';
-import {
-  PaymentCurrency,
-  PaymentCurrencyLimit,
-  PurchaseCurrency,
-  PurchaseCurrencyNetwork,
-  SellCurrency,
-  SellCurrencyNetwork,
-  SellOptionsResponse,
-  SellQuoteResponse,
-} from '../types';
+  useEffect,
+  ReactNode,
+} from "react";
+import { RampTransaction } from "../types/RampTransaction";
 
-import {
-  OnrampConfigCountry,
-  OnrampConfigResponseData,
-  OnrampOptionsResponseData,
-  OnrampPaymentMethod,
-  OnrampPurchaseCurrency,
-  OnrampQuoteResponseData,
-} from '@coinbase/onchainkit/fund';
-import { RampTransaction } from '../types/RampTransaction';
+interface Country {
+  id: string;
+  name: string;
+  subdivisions: string[];
+  paymentMethods?: Array<{
+    id: string;
+    name?: string;
+  }>;
+}
 
-isocountries.registerLocale(enLocale);
-export type Mode = 'fund-card' | 'fund-button' | 'onramp' | 'offramp';
+interface Currency {
+  id: string;
+  name: string;
+}
+
+interface Network {
+  name: string;
+  displayName: string;
+}
+
+interface PurchaseCurrency {
+  id: string;
+  name: string;
+  symbol: string;
+  networks: Network[];
+}
+
+interface SellCurrencyNetwork {
+  name: string;
+  display_name: string;
+}
+
+interface SellCurrency {
+  id: string;
+  name: string;
+  networks: SellCurrencyNetwork[];
+}
+
+interface BuyOptions {
+  paymentCurrencies: Currency[];
+  purchaseCurrencies: PurchaseCurrency[];
+}
+
+interface SellOptions {
+  sell_currencies: SellCurrency[];
+}
+
 interface CoinbaseRampTransactionContextType {
-  mode: Mode;
-  setMode: (mode: Mode) => void;
-  rampTransaction: RampTransaction | null;
-  setRampTransaction: (rampTransaction: Partial<RampTransaction>) => void;
-  buyConfig: OnrampConfigResponseData | null;
-  setBuyConfig: (buyConfig: OnrampConfigResponseData) => void;
-  countries: Array<OnrampConfigCountry & { name?: string }>;
-  selectedCountry: OnrampConfigCountry | null;
-  setSelectedCountry: (country: OnrampConfigCountry) => void;
+  countries: Country[];
+  selectedCountry: Country | null;
+  setSelectedCountry: (country: Country) => void;
   selectedSubdivision: string | null;
-  setSelectedSubdivision: (subdivision: string) => void;
-  selectedPurchaseCurrencyNetwork:
-    | OnrampPurchaseCurrency['networks'][0]
-    | PurchaseCurrencyNetwork
-    | null;
-  setSelectedPurchaseCurrencyNetwork: (
-    network:
-      | OnrampPurchaseCurrency['networks'][0]
-      | PurchaseCurrencyNetwork
-      | null
-  ) => void;
-  selectedPurchaseCurrency: OnrampPurchaseCurrency | null;
-  setSelectedPurchaseCurrency: (
-    purchaseCurrency: OnrampPurchaseCurrency | null
-  ) => void;
+  setSelectedSubdivision: (subdivision: string | null) => void;
+  selectedCurrency: Currency | null;
+  setSelectedCurrency: (currency: Currency | null) => void;
+  buyOptions: BuyOptions | null;
+  sellOptions: SellOptions | null;
+  loadingBuyConfig: boolean;
+  loadingBuyOptions: boolean;
+  selectedPurchaseCurrency: PurchaseCurrency | null;
+  setSelectedPurchaseCurrency: (currency: PurchaseCurrency) => void;
+  selectedPurchaseCurrencyNetwork: Network | null;
+  setSelectedPurchaseCurrencyNetwork: (network: Network | null) => void;
+  selectedSellCurrency: SellCurrency | null;
+  setSelectedSellCurrency: (currency: SellCurrency) => void;
   selectedSellCurrencyNetwork: SellCurrencyNetwork | null;
   setSelectedSellCurrencyNetwork: (network: SellCurrencyNetwork | null) => void;
-  selectedSellCurrency: SellCurrency | null;
-  setSelectedSellCurrency: (purchaseCurrency: SellCurrency | null) => void;
-  buyOptions: OnrampOptionsResponseData | null;
-  setBuyOptions: (buyOptions: OnrampOptionsResponseData | null) => void;
-  sellOptions: SellOptionsResponse | null;
-  setSellOptions: (buyOptions: SellOptionsResponse | null) => void;
-  selectedPaymentMethod: OnrampPaymentMethod | null;
-  setSelectedPaymentMethod: (paymentMethod: OnrampPaymentMethod | null) => void;
-  secureToken: string | null;
-  setSecureToken: (secureToken: string | null) => void;
-  buyQuote: OnrampQuoteResponseData | null;
-  setBuyQuote: (buyQuote: OnrampQuoteResponseData | null) => void;
-  sellQuote: SellQuoteResponse | null;
-  setSellQuote: (buyQuote: SellQuoteResponse | null) => void;
+  isOnrampActive: boolean;
+  setIsOnrampActive: (isActive: boolean) => void;
+  rampTransaction?: RampTransaction;
+  setRampTransaction: (transaction: RampTransaction) => void;
+  setSelectedPaymentMethod: (method: any) => void;
   authenticated: boolean;
   setAuthenticated: (authenticated: boolean) => void;
-  selectedCurrency: PaymentCurrency | null;
-  setSelectedCurrency: (currency: PaymentCurrency | null) => void;
-  partnerUserId: string | null;
-  setPartnerUserId: (partnerUserId: string | null) => void;
-  signingIn: boolean;
-  setSigningIn: (signingIn: boolean) => void;
-  loadingBuyConfig: boolean;
-  setLoadingBuyConfig: (loadingBuyConfig: boolean) => void;
-  loadingBuyOptions: boolean;
-  setLoadingBuyOptions: (loadingBuyOptions: boolean) => void;
-  loadingSellOptions: boolean;
-  setLoadingSellOptions: (loadingSellOptions: boolean) => void;
-  isOnrampActive: boolean;
-  isOfframpActive: boolean;
-  selectedPaymentMethodLimit: PaymentCurrencyLimit | undefined;
-  fetchingQuote: boolean;
-  setFetchingQuote: (fetchingQuote: boolean) => void;
+  partnerUserId?: string;
 }
 
 const CoinbaseRampTransactionContext = createContext<
   CoinbaseRampTransactionContextType | undefined
 >(undefined);
 
+// Sample data for demonstration
+const sampleCountries: Country[] = [
+  {
+    id: "US",
+    name: "United States",
+    subdivisions: ["California", "New York", "Texas"],
+    paymentMethods: [
+      { id: "credit_card", name: "Credit Card" },
+      { id: "debit_card", name: "Debit Card" },
+      { id: "bank_transfer", name: "Bank Transfer" },
+    ],
+  },
+  {
+    id: "CA",
+    name: "Canada",
+    subdivisions: ["Ontario", "Quebec", "British Columbia"],
+    paymentMethods: [
+      { id: "credit_card", name: "Credit Card" },
+      { id: "debit_card", name: "Debit Card" },
+    ],
+  },
+  {
+    id: "GB",
+    name: "United Kingdom",
+    subdivisions: [],
+    paymentMethods: [
+      { id: "credit_card", name: "Credit Card" },
+      { id: "bank_transfer", name: "Bank Transfer" },
+    ],
+  },
+  {
+    id: "DE",
+    name: "Germany",
+    subdivisions: [],
+    paymentMethods: [
+      { id: "credit_card", name: "Credit Card" },
+      { id: "sepa", name: "SEPA Transfer" },
+    ],
+  },
+];
+
+const sampleCurrencies: Currency[] = [
+  { id: "USD", name: "US Dollar" },
+  { id: "EUR", name: "Euro" },
+  { id: "GBP", name: "British Pound" },
+];
+
+const sampleNetworks: Network[] = [
+  { name: "ethereum", displayName: "Ethereum" },
+  { name: "base", displayName: "Base" },
+  { name: "optimism", displayName: "Optimism" },
+];
+
+const samplePurchaseCurrencies: PurchaseCurrency[] = [
+  { id: "BTC", name: "Bitcoin", symbol: "₿", networks: sampleNetworks },
+  { id: "ETH", name: "Ethereum", symbol: "Ξ", networks: sampleNetworks },
+  { id: "USDC", name: "USD Coin", symbol: "$", networks: sampleNetworks },
+];
+
+const sampleSellCurrencies: SellCurrency[] = [
+  {
+    id: "BTC",
+    name: "Bitcoin",
+    networks: sampleNetworks.map((n) => ({
+      name: n.name,
+      display_name: n.displayName,
+    })),
+  },
+  {
+    id: "ETH",
+    name: "Ethereum",
+    networks: sampleNetworks.map((n) => ({
+      name: n.name,
+      display_name: n.displayName,
+    })),
+  },
+  {
+    id: "USDC",
+    name: "USD Coin",
+    networks: sampleNetworks.map((n) => ({
+      name: n.name,
+      display_name: n.displayName,
+    })),
+  },
+];
+
 export const CoinbaseRampTransactionProvider = ({
   children,
 }: {
   children: ReactNode;
 }) => {
-  const [rampTransaction, setRampTransaction] =
-    useState<RampTransaction | null>({
-      amount: '0',
-    });
-  const [selectedCountry, setSelectedCountry] =
-    useState<OnrampConfigCountry | null>(null);
-  const [buyConfig, setBuyConfig] = useState<OnrampConfigResponseData | null>(
-    null
+  const [countries] = useState<Country[]>(sampleCountries);
+  const [selectedCountry, setSelectedCountry] = useState<Country | null>(
+    sampleCountries[0]
   );
   const [selectedSubdivision, setSelectedSubdivision] = useState<string | null>(
     null
   );
-  const [selectedPurchaseCurrencyNetwork, setSelectedPurchaseCurrencyNetwork] =
-    useState<
-      OnrampPurchaseCurrency['networks'][0] | PurchaseCurrencyNetwork | null
-    >(null);
-  const [selectedPurchaseCurrency, setSelectedPurchaseCurrency] =
-    useState<OnrampPurchaseCurrency | null>(null);
-  const [selectedSellCurrencyNetwork, setSelectedSellCurrencyNetwork] =
-    useState<PurchaseCurrencyNetwork | null>(null);
-  const [selectedSellCurrency, setSelectedSellCurrency] =
-    useState<PurchaseCurrency | null>(null);
-  const [buyOptions, setBuyOptions] =
-    useState<OnrampOptionsResponseData | null>(null);
-  const [sellOptions, setSellOptions] = useState<SellOptionsResponse | null>(
-    null
+  const [selectedCurrency, setSelectedCurrency] = useState<Currency | null>(
+    sampleCurrencies[0]
   );
-  const [mode, setMode] = useState<Mode>('fund-card');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] =
-    useState<OnrampPaymentMethod | null>(null);
-  const [secureToken, setSecureToken] = useState<string | null>(null);
-  const [buyQuote, setBuyQuote] = useState<OnrampQuoteResponseData | null>(
-    null
-  );
-  const [sellQuote, setSellQuote] = useState<SellQuoteResponse | null>(null);
-  const [loadingBuyOptions, setLoadingBuyOptions] = useState(false);
-  const [loadingSellOptions, setLoadingSellOptions] = useState(false);
-  const [fetchingQuote, setFetchingQuote] = useState(false);
-  const countries = useMemo<
-    Array<OnrampConfigCountry & { name?: string }>
-  >(() => {
-    return (
-      buyConfig?.countries.map(({ id, subdivisions, paymentMethods }) => ({
-        id,
-        name: isocountries.getName(id, 'en'),
-        subdivisions,
-        paymentMethods,
-      })) || []
-    );
-  }, [buyConfig]);
-  const [selectedCurrency, setSelectedCurrency] =
-    useState<PaymentCurrency | null>(null);
-  const [authenticated, setAuthenticated] = useState(false);
-  const [partnerUserId, setPartnerUserId] = useState<string | null>(null);
-  const [signingIn, setSigningIn] = useState(false);
   const [loadingBuyConfig, setLoadingBuyConfig] = useState(false);
-  const isOnrampActive = useMemo(() => mode === 'onramp', [mode]);
-  const isOfframpActive = useMemo(() => mode === 'offramp', [mode]);
+  const [loadingBuyOptions, setLoadingBuyOptions] = useState(false);
+  const [buyOptions, setBuyOptions] = useState<BuyOptions | null>({
+    paymentCurrencies: sampleCurrencies,
+    purchaseCurrencies: samplePurchaseCurrencies,
+  });
+  const [sellOptions, setSellOptions] = useState<SellOptions | null>({
+    sell_currencies: sampleSellCurrencies,
+  });
+  const [selectedPurchaseCurrency, setSelectedPurchaseCurrency] =
+    useState<PurchaseCurrency | null>(samplePurchaseCurrencies[0]);
+  const [selectedPurchaseCurrencyNetwork, setSelectedPurchaseCurrencyNetwork] =
+    useState<Network | null>(sampleNetworks[0]);
+  const [selectedSellCurrency, setSelectedSellCurrency] =
+    useState<SellCurrency | null>(sampleSellCurrencies[0]);
+  const [selectedSellCurrencyNetwork, setSelectedSellCurrencyNetwork] =
+    useState<SellCurrencyNetwork | null>({
+      name: sampleNetworks[0].name,
+      display_name: sampleNetworks[0].displayName,
+    });
+  const [isOnrampActive, setIsOnrampActive] = useState(true);
+  const [rampTransaction, setRampTransaction] = useState<RampTransaction>({});
+  const [authenticated, setAuthenticated] = useState(false);
+  const partnerUserId = "demo-user-123"; // Sample partner user ID
 
-  const handleSetRampTransaction = (
-    rampTransactionUpdate: Partial<RampTransaction>
-  ) => {
-    setRampTransaction({ ...rampTransaction, ...rampTransactionUpdate });
+  // Simulate loading data
+  useEffect(() => {
+    setLoadingBuyConfig(true);
+    setLoadingBuyOptions(true);
+
+    // Simulate API call
+    const timer = setTimeout(() => {
+      setLoadingBuyConfig(false);
+      setLoadingBuyOptions(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const setSelectedPaymentMethod = (method: any) => {
+    // Implementation for setting payment method
   };
 
-  const handleSetSelectedCountry = useCallback(
-    (country: OnrampConfigCountry) => {
-      setSelectedCountry(country);
-      setRampTransaction({ ...rampTransaction, country: country });
-    },
-    [rampTransaction, setRampTransaction, setSelectedCountry]
-  );
-
-  useEffect(() => {
-    if (isOfframpActive) {
-      if (!selectedSellCurrency && sellOptions) {
-        let defaultSellCurrency = sellOptions.sell_currencies.find(
-          (currency) => currency.symbol.toUpperCase() === 'USDC'
-        );
-
-        if (!defaultSellCurrency)
-          defaultSellCurrency = sellOptions.sell_currencies[0];
-
-        setSelectedSellCurrency(defaultSellCurrency);
-
-        if (defaultSellCurrency) {
-          const defaultNetwork = defaultSellCurrency.networks.find(
-            (network) => network.chain_id == '8453'
-          );
-
-          if (defaultNetwork) {
-            setSelectedSellCurrencyNetwork(defaultNetwork);
-          } else {
-            setSelectedPurchaseCurrencyNetwork(defaultSellCurrency.networks[0]);
-          }
-        }
-      }
-
-      let defaultCurrency = sellOptions?.cashout_currencies.find(
-        (currency) => currency.id.toUpperCase() === 'USD'
-      );
-
-      if (!defaultCurrency) {
-        defaultCurrency = sellOptions?.cashout_currencies[0];
-      }
-
-      if (defaultCurrency) {
-        setRampTransaction({
-          ...rampTransaction,
-          currency: defaultCurrency.id,
-          paymentMethod: defaultCurrency.limits[0].id,
-        });
-        setSelectedCurrency(defaultCurrency);
-        setSelectedPaymentMethod(defaultCurrency.limits[0]);
-      }
-    }
-  }, [isOfframpActive, rampTransaction, selectedSellCurrency, sellOptions]);
-
-  const setDefaultPaymentCurrencyInOnrampMode = useCallback(() => {
-    let defaultCurrency = buyOptions?.paymentCurrencies.find(
-      (currency) => currency.id.toUpperCase() === 'USD'
-    );
-
-    if (!defaultCurrency) {
-      defaultCurrency = buyOptions?.paymentCurrencies[0];
-    }
-
-    if (defaultCurrency) {
-      setRampTransaction({
-        ...rampTransaction,
-        currency: defaultCurrency.id,
-        paymentMethod: defaultCurrency.limits[0].id,
-      });
-      setSelectedCurrency(defaultCurrency);
-      setSelectedPaymentMethod(defaultCurrency.limits[0]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buyOptions]);
-
-  useEffect(() => {
-    if (isOnrampActive) {
-      setDefaultPaymentCurrencyInOnrampMode();
-    }
-  }, [isOnrampActive, setDefaultPaymentCurrencyInOnrampMode]);
-
-  useEffect(() => {
-    // Setup default settings
-
-    // Select default country
-    if (!selectedCountry && countries.length) {
-      // Setup default settings only once
-      const defaultCountry = countries.find((country) => country.id === 'US');
-
-      if (defaultCountry) {
-        setSelectedCountry(defaultCountry);
-        setRampTransaction({ ...rampTransaction, country: defaultCountry });
-
-        const defaultSubdivision = defaultCountry.subdivisions.find(
-          (subdivision) => subdivision === 'CA'
-        );
-        if (defaultSubdivision) {
-          setSelectedSubdivision(defaultSubdivision);
-        }
-      } else {
-        setSelectedCountry(countries[0]);
-        if (countries[0].subdivisions.length) {
-          setSelectedSubdivision(countries[0].subdivisions[0]);
-        }
-      }
-    }
-
-    // Select default purchase currency
-    if (!selectedPurchaseCurrency && buyOptions) {
-      let defaultPurchaseCurrency = buyOptions.purchaseCurrencies.find(
-        (currency) => currency.symbol.toUpperCase() === 'USDC'
-      );
-
-      if (!defaultPurchaseCurrency) {
-        defaultPurchaseCurrency = buyOptions.purchaseCurrencies[0];
-      }
-
-      setSelectedPurchaseCurrency(defaultPurchaseCurrency);
-      if (defaultPurchaseCurrency) {
-        // Select 'base' as the default network
-        const defaultNetwork = defaultPurchaseCurrency.networks.find(
-          (network) => network.chainId == '8453'
-        );
-
-        if (defaultNetwork) {
-          setSelectedPurchaseCurrencyNetwork(defaultNetwork);
-        } else {
-          setSelectedPurchaseCurrencyNetwork(
-            defaultPurchaseCurrency.networks[0]
-          );
-        }
-      }
-
-      if (!rampTransaction?.currency) {
-        setDefaultPaymentCurrencyInOnrampMode();
-      }
-    }
-  }, [
-    countries,
-    selectedCountry,
-    buyOptions,
-    selectedPurchaseCurrency,
-    selectedPurchaseCurrencyNetwork,
-    rampTransaction,
-    setDefaultPaymentCurrencyInOnrampMode,
-  ]);
-
-  const selectedPaymentMethodLimit = useMemo(() => {
-    return selectedCurrency?.limits.find(
-      (limit) => limit.id === selectedPaymentMethod?.id
-    );
-  }, [selectedCurrency, selectedPaymentMethod]);
-
-  const contextValue: CoinbaseRampTransactionContextType = {
-    mode,
-    setMode,
-    rampTransaction,
-    setRampTransaction: handleSetRampTransaction,
-    buyConfig,
-    setBuyConfig,
-    countries,
-    selectedCountry,
-    setSelectedCountry: handleSetSelectedCountry,
-    selectedSubdivision,
-    setSelectedSubdivision,
-    selectedPurchaseCurrencyNetwork,
-    setSelectedPurchaseCurrencyNetwork,
-    selectedPurchaseCurrency,
-    setSelectedPurchaseCurrency,
-    buyOptions,
-    setBuyOptions,
-    selectedPaymentMethod,
-    setSelectedPaymentMethod,
-    secureToken,
-    setSecureToken,
-    buyQuote,
-    setBuyQuote,
-    authenticated,
-    setAuthenticated,
-    selectedCurrency,
-    setSelectedCurrency,
-    partnerUserId,
-    setPartnerUserId,
-    signingIn,
-    setSigningIn,
-    loadingBuyConfig,
-    setLoadingBuyConfig,
-    loadingBuyOptions,
-    setLoadingBuyOptions,
-    loadingSellOptions,
-    setLoadingSellOptions,
-    sellOptions,
-    setSellOptions,
-    selectedSellCurrency,
-    setSelectedSellCurrency,
-    selectedSellCurrencyNetwork,
-    setSelectedSellCurrencyNetwork,
-    sellQuote,
-    setSellQuote,
-    isOnrampActive,
-    isOfframpActive,
-    selectedPaymentMethodLimit,
-    fetchingQuote,
-    setFetchingQuote,
-  };
   return (
-    <CoinbaseRampTransactionContext.Provider value={contextValue}>
+    <CoinbaseRampTransactionContext.Provider
+      value={{
+        countries,
+        selectedCountry,
+        setSelectedCountry,
+        selectedSubdivision,
+        setSelectedSubdivision,
+        selectedCurrency,
+        setSelectedCurrency,
+        buyOptions,
+        sellOptions,
+        loadingBuyConfig,
+        loadingBuyOptions,
+        selectedPurchaseCurrency,
+        setSelectedPurchaseCurrency,
+        selectedPurchaseCurrencyNetwork,
+        setSelectedPurchaseCurrencyNetwork,
+        selectedSellCurrency,
+        setSelectedSellCurrency,
+        selectedSellCurrencyNetwork,
+        setSelectedSellCurrencyNetwork,
+        isOnrampActive,
+        setIsOnrampActive,
+        rampTransaction,
+        setRampTransaction,
+        setSelectedPaymentMethod,
+        authenticated,
+        setAuthenticated,
+        partnerUserId,
+      }}
+    >
       {children}
     </CoinbaseRampTransactionContext.Provider>
   );
@@ -383,7 +273,9 @@ export const CoinbaseRampTransactionProvider = ({
 export const useCoinbaseRampTransaction = () => {
   const context = useContext(CoinbaseRampTransactionContext);
   if (context === undefined) {
-    throw new Error('useCountry must be used within a CountryProvider');
+    throw new Error(
+      "useCoinbaseRampTransaction must be used within a CoinbaseRampTransactionProvider"
+    );
   }
   return context;
 };

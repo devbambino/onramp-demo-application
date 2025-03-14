@@ -1,126 +1,92 @@
-'use client';
-import {
-  Autocomplete,
-  AutocompleteItem,
-  Card,
-  CardBody,
-  CardFooter,
-  CardHeader,
-  Input,
-} from '@nextui-org/react';
-import { Key, useState } from 'react';
+"use client";
+import React, { useState, useEffect } from "react";
+import { FundCard, FundCardPropsReact } from "@coinbase/onchainkit/fund";
+import { useCoinbaseRampTransaction } from "../contexts/CoinbaseRampTransactionContext";
+import { useAccount } from "wagmi";
 
-import { FundCard, FundCardPropsReact } from '@coinbase/onchainkit/fund';
-import { useCoinbaseRampTransaction } from '../contexts/CoinbaseRampTransactionContext';
-import { RegionSelector } from './RegionSelector';
+// Import the Currency interface
+interface Currency {
+  id: string;
+  name: string;
+}
 
-export const FundCardDemo = () => {
-  const {
-    selectedCountry,
-    selectedSubdivision,
-    selectedCurrency,
-    setSelectedCurrency,
-    buyOptions,
-  } = useCoinbaseRampTransaction();
+export function FundCardDemo() {
+  const { selectedCountry, selectedSubdivision, selectedCurrency } =
+    useCoinbaseRampTransaction();
 
-  const [asset, setAsset] = useState('BTC');
+  const { isConnected } = useAccount();
+  const [cdpProjectId, setCdpProjectId] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [asset, setAsset] = useState("USDC");
   const [presetAmountInputs, setPresetAmountInputs] = useState<
-    FundCardPropsReact['presetAmountInputs']
-  >(['10', '20', '30']);
+    FundCardPropsReact["presetAmountInputs"]
+  >(["10", "25", "50"]);
 
-  const handleCurrencySelection = (value: Key | null) => {
-    if (value) {
-      if (buyOptions) {
-        const newCurrency =
-          buyOptions.paymentCurrencies.find(
-            (currency) => currency.id === value
-          ) || null;
-        setSelectedCurrency(newCurrency);
+  useEffect(() => {
+    // Fetch CDP Project ID from server
+    const fetchCdpProjectId = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch("/api/auth", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setCdpProjectId(data.config.cdpProjectId || "");
+          }
+        }
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching CDP Project ID:", error);
+        setIsLoading(false);
       }
-    }
-  };
+    };
 
-  const availableCurrencies = buyOptions?.paymentCurrencies || [];
+    fetchCdpProjectId();
+  }, []);
+
   return (
-    <div className="flex flex-col items-center justify-center flex-wrap gap-4">
-      <div className="flex justify-center items-center w-[500px] gap-4 flex-col">
+    <div className="w-full max-w-sm mx-auto">
+      {isLoading ? (
+        <div className="p-6 space-y-4">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-300 dark:bg-gray-700 rounded w-3/4 mx-auto"></div>
+            <div className="h-24 bg-gray-300 dark:bg-gray-700 rounded"></div>
+            <div className="h-10 bg-gray-300 dark:bg-gray-700 rounded"></div>
+            <div className="h-10 bg-gray-300 dark:bg-gray-700 rounded"></div>
+          </div>
+        </div>
+      ) : isConnected ? (
         <FundCard
-          key={`${asset}-${selectedCountry?.id}-${selectedCurrency?.id}-${selectedSubdivision}`}
           assetSymbol={asset}
-          country={selectedCountry?.id || 'US'}
-          currency={selectedCurrency?.id || 'USD'}
+          country={selectedCountry ? selectedCountry.id : "US"}
           subdivision={selectedSubdivision || undefined}
+          currency={selectedCurrency ? selectedCurrency.id : "USD"}
           presetAmountInputs={presetAmountInputs}
+          headerText="Fund Your Project"
+          buttonText="Continue"
         />
-      </div>
-
-      <div className="flex flex-col gap-2 items-center p-4">
-        <Card>
-          <CardHeader>
-            <p className="text-white text-lg">Fund card props</p>
-          </CardHeader>
-          <CardBody>
-            <div>
-              <RegionSelector />
-            </div>
-            <div className="flex pt-4 pb-4  gap-2 flex-wrap">
-              <Autocomplete
-                isClearable={false}
-                label="Currency"
-                placeholder="Search for a currency"
-                className="w-[200px] my-auto"
-                onSelectionChange={handleCurrencySelection}
-                selectedKey={selectedCurrency?.id}
-              >
-                {availableCurrencies.map((currency) => (
-                  <AutocompleteItem key={currency.id} value={currency.id}>
-                    {currency.id}
-                  </AutocompleteItem>
-                ))}
-              </Autocomplete>
-
-              <Input
-                placeholder="asset"
-                label="asset"
-                variant="bordered"
-                value={asset}
-                className="w-[150px]"
-                onChange={(e) => {
-                  setAsset(e.target.value);
-                }}
-              />
-
-              <Input
-                placeholder="presetAmountInputs"
-                label="presetAmountInputs"
-                variant="bordered"
-                className="w-[150px]"
-                value={presetAmountInputs?.join(',')}
-                onChange={(e) => {
-                  setPresetAmountInputs(
-                    e.target.value.split(
-                      ','
-                    ) as unknown as FundCardPropsReact['presetAmountInputs']
-                  );
-                }}
-              />
-            </div>
-          </CardBody>
-
-          <CardFooter>
-            <p className="text-white text-sm cursor-pointer text-blue-500">
-              <a
-                href="https://onchainkit.xyz/fund/fund-card"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500"
-              >
-                See full documentation here
-              </a>
+      ) : (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-100 dark:border-gray-700 text-center">
+          <p className="text-amber-600 dark:text-amber-400 text-sm">
+            Please connect your wallet to use the Fund Card
+          </p>
+          {cdpProjectId ? (
+            <p className="text-green-600 dark:text-green-400 text-xs mt-2">
+              CDP Project ID loaded successfully
             </p>
-          </CardFooter>
-        </Card>
-      </div>
+          ) : (
+            <p className="text-red-600 dark:text-red-400 text-xs mt-2">
+              CDP Project ID not loaded
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
-};
+}

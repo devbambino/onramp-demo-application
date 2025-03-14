@@ -1,51 +1,155 @@
-# Coinbase Onramp Demo App
+# Coinbase On/Off Ramp Demo
 
-This project serves to be a demo to utilize Coinbase Onramp 
+A Next.js application demonstrating the integration of Coinbase's On-ramp and Off-ramp services, allowing users to easily convert between fiat and cryptocurrency.
+
+## Features
+
+- **Coinbase Onramp Integration**: Allows users to purchase crypto with fiat currency
+- **Coinbase Offramp Integration**: Enables users to convert crypto back to fiat
+- **Wallet Connection**: Integrates with Web3 wallets via WalletConnect
+- **Responsive Design**: Modern UI that works across devices
+- **Multiple Integration Options**:
+  - **Fund Card**: Pre-built UI component from Coinbase
+  - **Custom Integration**: Fully customizable UI with enhanced dropdown options
 
 ## Getting Started
 
-### Environment Setup
+### Environment Variables Setup
 
-Install System Dependencies
+This project requires several API keys to function properly. For security reasons, these keys are not included in the repository.
 
-- Nodejs
-- yarn
+1. Copy the `.env.example` file to `.env.local`:
 
-Install App dependencies
+   ```bash
+   cp .env.example .env.local
+   ```
 
-```bash
-yarn
-```
+2. Obtain the necessary API keys:
 
+   - **CDP Project ID**: Get this from the [Coinbase Developer Platform Dashboard](https://portal.cdp.coinbase.com/)
+   - **OnchainKit API Key**: Get this from the [Coinbase Developer Platform Dashboard](https://portal.cdp.coinbase.com/)
+   - **WalletConnect Project ID**: Get this from the [WalletConnect Dashboard](https://cloud.walletconnect.com/)
 
-### CDP (Coinbase Developer Platform) setup
+3. Add your API keys to the `.env.local` file:
 
-#### Enable Onramp on [CDP](https://portal.cdp.coinbase.com)
+   ```
+   # Client-side variables (accessible in browser)
+   NEXT_PUBLIC_ONCHAINKIT_API_KEY=your_onchainkit_api_key
+   NEXT_PUBLIC_CDP_PROJECT_ID=your_CDP_PROJECT_ID
+   NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME=Coinbase Ramp Demo
 
-![onramp option](/readme-assets/onramp-menu-bar-view.png)
+   # Server-side variables (not accessible in browser)
+   CDP_PROJECT_ID=your_cdp_project_id
+   ONCHAINKIT_API_KEY=your_onchainkit_api_key
+   CDP_PROJECT_ID=your_CDP_PROJECT_ID
+   ```
 
-#### Issue API Key, that will be used in .env file on [CDP](https://portal.cdp.coinbase.com)
+   Note that some variables are duplicated with and without the `NEXT_PUBLIC_` prefix. This is because:
 
-![cdp api key](/readme-assets/cdp-api-key-view.png)
+   - Variables with `NEXT_PUBLIC_` are accessible in client-side code
+   - Variables without `NEXT_PUBLIC_` are only accessible in server-side code (API routes)
 
-#### Issue OnchainKit API Key on [CDP](https://portal.cdp.coinbase.com)
+> **IMPORTANT**: Never commit your API keys to the repository. The `.env.local` and `.env.production` files are included in `.gitignore` to prevent accidental exposure.
 
-![onchainkit api key](/readme-assets/onchainkit-setup.png)
+## Integration Options
 
-Add API Keys into your .env file
+### Fund Card
 
-### Running the app
-run the development server:
+The Fund Card provides a pre-built UI component from Coinbase that handles the entire on-ramp process with minimal configuration.
 
-```bash
-yarn dev
-```
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+#### Troubleshooting FundCard Issues
 
-## Learn More
+If you're experiencing issues with the FundCard component:
 
-To learn more about Coinbase Onramp, take a look at the following resources:
+1. **400 Bad Request Error**:
 
-- [Coinbase Onramp](https://docs.cdp.coinbase.com/onramp/docs/welcome) - Learn more about Coinbase Onramp
+   - Ensure your CDP Project ID is correctly set in the `.env.local` file
+   - Verify that your OnchainKit API Key is valid and active
+   - Check that your wallet is connected to the correct network (Base is recommended)
+   - Look for detailed error messages in the browser console
 
-You can check out [the CDP Docs](https://docs.cdp.coinbase.com/) for more apis
+2. **Wallet Connection Issues**:
+
+   - Make sure your WalletConnect Project ID is correctly set
+   - Try disconnecting and reconnecting your wallet
+   - Ensure you're using a compatible wallet (Coinbase Wallet is recommended)
+
+3. **Testing with Simplified Components**:
+
+   - Visit `/basic-fund` to test a minimal FundCard implementation
+   - Visit `/simple-fund` to test a FundCard with CDP Project ID handling
+
+4. **Environment Variable Verification**:
+   - Both client-side (`NEXT_PUBLIC_*`) and server-side variables must be set
+   - The API route at `/api/auth` must return a valid CDP Project ID
+
+### Custom Integration
+
+The Custom Integration demo showcases a fully customizable UI that gives you complete control over the user experience. Recent enhancements include:
+
+- **Expanded Currency Options**: Support for USD, EUR, GBP, CAD, AUD, JPY, CHF, SGD
+- **Multiple Cryptocurrency Assets**: USDC, ETH, BTC, SOL, MATIC, AVAX, LINK, UNI, AAVE, DAI
+- **Diverse Network Support**: Base, Ethereum, Optimism, Arbitrum, Polygon, Avalanche, Solana, BNB Chain
+- **Comprehensive Payment Methods**: Card, Bank, Apple Pay, Google Pay, PayPal, Coinbase, ACH, SEPA, iDEAL, SOFORT
+- **Global Coverage**: Support for multiple countries including US, UK, Canada, Australia, Germany, France, Spain, Italy, Netherlands, Switzerland, Singapore, Japan
+
+## Tech Stack
+
+- Next.js 14
+- React
+- TypeScript
+- Tailwind CSS
+- @coinbase/onchainkit
+- wagmi
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ and npm
+
+### Installation
+
+1. Clone the repository
+
+   ```bash
+   git clone https://github.com/echirinos/coinbase-on-off-ramp.git
+   cd coinbase-on-off-ramp
+   ```
+
+2. Install dependencies
+
+   ```bash
+   npm install
+   ```
+
+3. Create a `.env.local` file in the root directory with the following variables:
+
+   ```
+   NEXT_PUBLIC_CDP_PROJECT_ID=your_CDP_PROJECT_ID
+   NEXT_PUBLIC_ONCHAINKIT_API_KEY=your_onchainkit_api_key
+   ```
+
+4. Start the development server
+
+   ```bash
+   npm run dev
+   ```
+
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## Deployment
+
+This project can be easily deployed on Vercel:
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fechirinos%2Fcoinbase-on-off-ramp)
+
+## Recent Updates
+
+- **Enhanced Custom Integration**: Added comprehensive dropdown options for countries, currencies, payment methods, and networks
+- **Improved Type Safety**: Fixed TypeScript type issues for better reliability
+- **UI Enhancements**: Updated styling for better user experience
+
+## License
+
+MIT

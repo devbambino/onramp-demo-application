@@ -1,39 +1,48 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useAccount, useConnect, useSignMessage } from "wagmi";
+import { useCoinbaseRampTransaction } from "../contexts/CoinbaseRampTransactionContext";
+import { setSession } from "../queries";
+import { SiweMessage } from "siwe";
 import {
-  Avatar,
-  Badge,
-  Identity,
-  Name,
-  Address as OnchainAddress,
-} from '@coinbase/onchainkit/identity';
-import { Button } from '@nextui-org/react';
-import Image from 'next/image';
-import { useEffect } from 'react';
-import { SiweMessage } from 'siwe';
-import { useAccount, useConnect, useSignMessage } from 'wagmi';
-import KeyIcon from '../assets/key.svg';
-import { useCoinbaseRampTransaction } from '../contexts/CoinbaseRampTransactionContext';
-import { setSession } from '../queries';
+  ConnectWallet,
+  Wallet,
+  WalletDropdown,
+  WalletDropdownDisconnect,
+} from "@coinbase/onchainkit/wallet";
+import { Address, Avatar, Name, Identity } from "@coinbase/onchainkit/identity";
+import { color } from "@coinbase/onchainkit/theme";
 
 interface IWalletConnectorProps {
   hideAddress?: boolean;
   hideEns?: boolean;
+  buttonStyle?: string;
 }
+
 export const WalletConnector = ({
-  hideAddress,
-  hideEns,
+  hideAddress = false,
+  hideEns = false,
+  buttonStyle = "px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors",
 }: IWalletConnectorProps) => {
-  const { address, isConnected, isConnecting } = useAccount();
+  const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
+  const { signMessageAsync } = useSignMessage();
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   const {
     setRampTransaction,
     rampTransaction,
     authenticated,
     setAuthenticated,
-    setSigningIn,
-    signingIn,
   } = useCoinbaseRampTransaction();
-  const { signMessageAsync } = useSignMessage();
+
+  // Auto sign-in when wallet is connected
+  useEffect(() => {
+    if (isConnected && address && !authenticated && !isSigningIn) {
+      handleSignIn();
+    }
+  }, [isConnected, address, authenticated]);
 
   useEffect(() => {
     if (authenticated && address && rampTransaction?.wallet !== address) {
@@ -41,7 +50,7 @@ export const WalletConnector = ({
         ...rampTransaction,
         wallet: address,
       });
-    } else if (!authenticated && rampTransaction?.wallet != undefined) {
+    } else if (!authenticated && rampTransaction?.wallet !== undefined) {
       setRampTransaction({
         ...rampTransaction,
         wallet: undefined,
@@ -49,109 +58,90 @@ export const WalletConnector = ({
     }
   }, [authenticated, address, setRampTransaction, rampTransaction]);
 
-  const connectWallet = () => {
+  const handleConnect = async () => {
     if (connectors.length) {
-      connect({
+      await connect({
         connector: connectors[0],
       });
     }
   };
 
-  const login = async () => {
+  const handleSignIn = async () => {
+    if (!address) return;
+    setIsSigningIn(true);
+
     try {
-      setSigningIn(true);
-      console.info('Logging in');
+      // Create a SIWE message
       const message = new SiweMessage({
         domain: window.location.host,
-        address: address,
-        statement: 'Sign in with Ethereum to Coinbase Ramp.',
+        address,
+        statement: "Sign in with Ethereum to Coinbase Ramp.",
         uri: window.location.origin,
-        version: '1',
+        version: "1",
+        chainId: 1,
+        nonce: Math.random().toString(36).substring(2, 10),
       });
 
+      // Sign the message
       const signature = await signMessageAsync({
         message: message.prepareMessage(),
       });
 
-      await setSession({ message, signature });
+      // Mock session setup
+      await setSession({
+        message,
+        signature,
+      });
 
       setAuthenticated(true);
     } catch (err) {
-      console.error('Err occurred when authenticating user', err);
+      console.error("Error occurred when authenticating user", err);
     } finally {
-      setSigningIn(false);
+      setIsSigningIn(false);
     }
   };
 
-  const logout = () => {
+  const handleDisconnect = () => {
     // Clear the session cookie
-    document.cookie = `coinbase-ramp-demo-app-auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
+    document.cookie = `coinbase-ramp-demo-app-auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict${
+      process.env.NODE_ENV === "production" ? "; Secure" : ""
+    }`;
     setAuthenticated(false);
   };
 
-  useEffect(() => {
-    if (
-      authenticated &&
-      isConnected &&
-      address &&
-      rampTransaction?.wallet !== address
-    ) {
-      setRampTransaction({
-        ...rampTransaction,
-        wallet: address,
-      });
-    }
-  }, [
-    address,
-    setRampTransaction,
-    rampTransaction,
-    isConnected,
-    authenticated,
-  ]);
+  // If not connected, show connect button
+  if (!isConnected) {
+    return (
+      <button onClick={handleConnect} className={buttonStyle}>
+        Connect Wallet
+      </button>
+    );
+  }
 
+  // If connected and authenticated, show wallet info with dropdown
   return (
-    <div className="flex">
-      {!authenticated && !isConnected ? (
-        <Button
-          className="m-auto"
-          onClick={connectWallet}
-          size="lg"
-          isLoading={isConnecting}
-        >
-          Connect Wallet
-        </Button>
-      ) : !authenticated ? (
-        <Button
-          className="m-auto"
-          onClick={login}
-          size="lg"
-          isLoading={signingIn}
-          startContent={
-            <Image alt="key" src={KeyIcon} width={24} height={24} />
-          }
-        >
-          Sign In
-        </Button>
-      ) : address && isConnected ? (
-        <div
-          className="flex items-center cursor-pointer my-auto"
-          onClick={() => logout()}
-        >
-          <Identity
-            address={address}
-            schemaId="0xf8b05c79f090979bf4a80270aba232dff11a10d9ca55c4f88de95317970f0de9"
-          >
+    <div className="flex justify-end">
+      <Wallet>
+        <ConnectWallet>
+          <Avatar className="h-6 w-6" />
+          {!hideEns && <Name />}
+        </ConnectWallet>
+        <WalletDropdown>
+          <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
             <Avatar />
-            {!hideEns && (
-              <Name>
-                <Badge />
-              </Name>
-            )}
-
-            {!hideAddress && <OnchainAddress />}
+            <Name />
+            {!hideAddress && <Address className={color.foregroundMuted} />}
           </Identity>
-        </div>
-      ) : null}
+          <div
+            className="px-4 py-2 text-red-500 cursor-pointer hover:bg-gray-100"
+            onClick={handleDisconnect}
+          >
+            Disconnect
+          </div>
+        </WalletDropdown>
+      </Wallet>
     </div>
   );
 };
+
+export default WalletConnector;
