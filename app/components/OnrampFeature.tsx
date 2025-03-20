@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useConnect } from "wagmi";
 import { generateOnrampURL } from "../utils/rampUtils";
 import {
   fetchBuyConfig,
@@ -15,6 +15,7 @@ import {
 } from "../utils/onrampApi";
 import GeneratedLinkModal from "./GeneratedLinkModal";
 import { fetchCryptoPrices } from "../utils/priceUtils";
+import { WalletDefault } from "@coinbase/onchainkit/wallet";
 
 // Define payment method descriptions
 const PAYMENT_METHOD_DESCRIPTIONS: Record<string, string> = {
@@ -166,6 +167,7 @@ const US_STATES = [
 
 export default function OnrampFeature() {
   const { address, isConnected } = useAccount();
+  const { connect, connectors } = useConnect();
   const [activeTab, setActiveTab] = useState<"api" | "url">("api");
   const [selectedAsset, setSelectedAsset] = useState("USDC");
   const [amount, setAmount] = useState("10");
@@ -452,9 +454,11 @@ export default function OnrampFeature() {
               {!isConnected && (
                 <div className="mb-6">
                   <button
-                    onClick={() =>
-                      document.getElementById("connect-wallet-button")?.click()
-                    }
+                    onClick={() => {
+                      if (connectors.length > 0) {
+                        connect({ connector: connectors[0] });
+                      }
+                    }}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-all shadow-md hover:shadow-lg"
                   >
                     Connect Wallet
