@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useConnect } from "wagmi";
 import { generateOfframpURL } from "../utils/rampUtils";
 import {
   fetchSellConfig,
@@ -11,6 +11,7 @@ import {
 } from "../utils/offrampApi";
 import { useSearchParams } from "next/navigation";
 import OfframpNotification from "./OfframpNotification";
+import { WalletDefault } from "@coinbase/onchainkit/wallet";
 
 // Define types for the modal component
 interface SimpleModalProps {
@@ -195,6 +196,7 @@ const US_STATES = [
 
 export default function OfframpFeature() {
   const { address, isConnected } = useAccount();
+  const { connect, connectors } = useConnect();
   const [selectedAsset, setSelectedAsset] = useState("USDC");
   const [amount, setAmount] = useState("10");
   const [selectedNetwork, setSelectedNetwork] = useState("base");
@@ -609,10 +611,12 @@ export default function OfframpFeature() {
               {activeTab === "api" && !isConnected && (
                 <div className="mb-6">
                   <button
-                    onClick={() =>
-                      document.getElementById("connect-wallet-button")?.click()
-                    }
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg"
+                    onClick={() => {
+                      if (connectors.length > 0) {
+                        connect({ connector: connectors[0] });
+                      }
+                    }}
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition-all shadow-md hover:shadow-lg"
                   >
                     Connect Wallet
                   </button>
