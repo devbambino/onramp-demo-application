@@ -330,6 +330,15 @@ export default function OnrampFeature() {
       try {
         const prices = await fetchCryptoPrices();
         setCryptoPrices(prices);
+
+        const options = await fetchBuyConfig();
+        //console.log('onramp page options:', options);
+
+        const optionsMx = await fetchBuyOptions("MX");
+        const optionsBr = await fetchBuyOptions("BR");
+        const optionsCo = await fetchBuyOptions("CO");
+        //console.log('onramp page optionsMx:', optionsMx);
+
       } catch (error) {
         console.error("Failed to fetch cryptocurrency prices:", error);
       } finally {
@@ -399,6 +408,8 @@ export default function OnrampFeature() {
       redirectUrl: window.location.origin + "/onramp",
       enableGuestCheckout, // Add guest checkout option
     });
+
+    console.log("onramp ulr:",url);
 
     window.open(url, "_blank");
   };

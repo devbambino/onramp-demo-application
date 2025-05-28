@@ -314,7 +314,7 @@ export async function fetchBuyOptions(country: string, subdivision?: string): Pr
 
     // Use the OnchainKit utility to fetch the options
     const options = await fetchOnrampOptions({ country, subdivision });
-    console.log('Buy options API response from OnchainKit:', options);
+    console.log('Buy options API response from OnchainKit for ',country,' options:', options);
 
     // Transform the response to match our expected format if needed
     const transformedOptions: BuyOptionsResponse = {
